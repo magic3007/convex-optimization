@@ -6,6 +6,7 @@ import logging
 import os
 from matplotlib import pyplot as plt
 import cvx_solver_collection
+import mosek_solver_collection
 import cvxpy
 
 
@@ -100,7 +101,7 @@ def solve_routine(mode: str, func, x0, A, b, mu, opts, u, errfun, errfun_exact, 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='A demo that solves the optimization problem '
-                                                 '$min 0.5 * ||A * x - b||_2^2 + mu * ||x||_{1,2}$')
+                                                 '$\min_x{0.5 * ||A * x - b||_2^2 + mu * ||x||_{1,2}}$')
     parser.add_argument('--log', type=str, default='opt.log', help='Path to the logging file.')
     parser.add_argument('--dest_dir', type=str, default='figures', help='Destination directory.')
     args = parser.parse_args( )
@@ -134,7 +135,8 @@ if __name__ == '__main__':
     cvx_gurobi_rv, _, _, _ = cvx_solver_collection.gl_cvx_gurobi( )(x0, A, b, mu, [ ])
     solvers = {
         'CVX-Mosek': cvx_solver_collection.gl_cvx_mosek( ),
-        'CVX-Gurobi': cvx_solver_collection.gl_cvx_gurobi( )
+        'CVX-Gurobi': cvx_solver_collection.gl_cvx_gurobi( ),
+        'Mosek': mosek_solver_collection.gl_mosek( ),
     }
     for mode, solver in solvers.items( ):
         solve_routine(mode, solver, x0, A, b, mu, [ ], u, errfun, errfun_exact, sparsity)

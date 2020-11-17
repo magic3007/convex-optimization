@@ -8,7 +8,7 @@ def gl_cvx_mosek():
     def foo(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu, opts):
         _, n = A.shape
         _, l = b.shape
-        x = cp.Variable((n, l))
+        x = cp.Variable(shape=(n, l), name='x')
         cost = 0.5 * cp.sum_squares(A @ x - b) + mu * cp.sum(cp.norm(x=x, p=2, axis=1))
         obj = cp.Minimize(expr=cost)
         prob = cp.Problem(objective=obj)
@@ -27,7 +27,7 @@ def gl_cvx_gurobi():
     def foo(x0: np.ndarray, A: np.ndarray, b, mu, opts):
         _, n = A.shape
         _, l = b.shape
-        x = cp.Variable((n, l))
+        x = cp.Variable(shape=(n, l), name='x')
         cost = 0.5 * cp.sum_squares(A @ x - b) + mu * cp.sum(cp.norm(x=x, p=2, axis=1))
         obj = cp.Minimize(expr=cost)
         prob = cp.Problem(objective=obj)

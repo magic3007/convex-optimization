@@ -5,7 +5,7 @@ import argparse
 import logging
 import os
 from matplotlib import pyplot as plt
-import solver_collection
+import cvx_solver_collection
 import cvxpy
 
 
@@ -118,8 +118,6 @@ if __name__ == '__main__':
 
     installed_solvers = cvxpy.installed_solvers( )
     logger.info("Installed solvers for cvxpy: " + str(installed_solvers))
-    assert 'MOSEK' in installed_solvers, 'MOSEK is not installed for cvxpy.'
-    assert 'GUROBI' in installed_solvers, 'GUROBI is not installed for cvxpy.'
 
     n, m, l, mu, A, b, u, x0, errfun, errfun_exact, sparsity = gen_data( )
 
@@ -132,11 +130,11 @@ if __name__ == '__main__':
     # plt.show( )
     plt.savefig(os.path.join(destination_directory, 'ground_truth.svg'))
 
-    cvx_mosek_rv, _, _, _ = solver_collection.gl_cvx_mosek( )(x0, A, b, mu, [ ])
-    cvx_gurobi_rv, _, _, _ = solver_collection.gl_cvx_gurobi( )(x0, A, b, mu, [ ])
+    cvx_mosek_rv, _, _, _ = cvx_solver_collection.gl_cvx_mosek( )(x0, A, b, mu, [ ])
+    cvx_gurobi_rv, _, _, _ = cvx_solver_collection.gl_cvx_gurobi( )(x0, A, b, mu, [ ])
     solvers = {
-        'CVX-Mosek': solver_collection.gl_cvx_mosek( ),
-        'CVX-Gurobi': solver_collection.gl_cvx_gurobi( )
+        'CVX-Mosek': cvx_solver_collection.gl_cvx_mosek( ),
+        'CVX-Gurobi': cvx_solver_collection.gl_cvx_gurobi( )
     }
     for mode, solver in solvers.items( ):
         solve_routine(mode, solver, x0, A, b, mu, [ ], u, errfun, errfun_exact, sparsity)

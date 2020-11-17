@@ -7,6 +7,7 @@ import os
 from matplotlib import pyplot as plt
 import cvx_solver_collection
 import mosek_solver_collection
+import gurobi_solver_collection
 import cvxpy
 
 
@@ -137,6 +138,7 @@ if __name__ == '__main__':
         'CVX-Mosek': cvx_solver_collection.gl_cvx_mosek( ),
         'CVX-Gurobi': cvx_solver_collection.gl_cvx_gurobi( ),
         'Mosek': mosek_solver_collection.gl_mosek( ),
+        'Gurobi': gurobi_solver_collection.gl_gurobi(),
     }
     for mode, solver in solvers.items( ):
         solve_routine(mode, solver, x0, A, b, mu, [ ], u, errfun, errfun_exact, sparsity)

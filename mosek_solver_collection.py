@@ -27,11 +27,13 @@ def gl_mosek():
             cost = Expr.add(cost1, cost2)
 
             M.objective(ObjectiveSense.Minimize, cost)
+            # Set values for an initial solution
+            # x.setLevel(x0.flatten( ).tolist( ))
             M.solve( )
 
             solve_time = M.getSolverDoubleInfo("optimizerTime")
-            out = M.primalObjValue( )
             num_iters = M.getSolverIntInfo("intpntIter")
+            out = M.primalObjValue( )
             rv = np.array(x.level( )).reshape(n, l)
 
             return rv, num_iters, out, solve_time

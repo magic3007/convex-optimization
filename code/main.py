@@ -5,13 +5,16 @@ import argparse
 import logging
 import os
 from matplotlib import pyplot as plt
-import cvx_solver_collection
-import mosek_solver_collection
-import gurobi_solver_collection
-import cvxpy
+import cvxpy as cp
+from gl_cvx_gurobi import gl_cvx_gurobi
+from gl_cvx_mosek import gl_cvx_mosek
+from gl_gurobi import gl_gurobi
+from gl_mosek import gl_mosek
 
 
 # min 0.5 * ||A * x - b||_2^2 + mu * ||x||_{1,2}
+# Credit to
+#   http://niaohe.ise.illinois.edu/IE598_2016/lasso_demo/index.html
 
 def gen_data():
     seed = 97006855
@@ -70,34 +73,24 @@ cvx_mosek_rv, cvx_gurobi_rv = None, None
 
 
 def solve_routine(mode: str, func, x0, A, b, mu, opts, u, errfun, errfun_exact, sparsity):
-    x, num_iters, out, solve_time = func(x0, A, b, mu, opts)
-    # Note that `prob.solver_stats.num_iters` is None for MOSEK
-    if num_iters is not None:
-        log_dict = {
-            "cpu: %5.2f": solve_time,
-            "iter: %5d": num_iters,
-            "optval: %6.5E": out,
-            "sparisity: %4.3f": sparsity(x),
-            "err-to-exact: %3.2E": errfun_exact(x),
-            "err-to-cvx-mosek: %3.2E": errfun(cvx_mosek_rv, x),
-            "err-to-cvx-gurobi: %3.2E": errfun(cvx_gurobi_rv, x)
-        }
-    else:
-        log_dict = {
-            "cpu: %5.2f": solve_time,
-            "iter: %5s": "None",
-            "optval: %6.5E": out,
-            "sparisity: %4.3f": sparsity(x),
-            "err-to-exact: %3.2E": errfun_exact(x),
-            "err-to-cvx-mosek: %3.2E": errfun(cvx_mosek_rv, x),
-            "err-to-cvx-gurobi: %3.2E": errfun(cvx_gurobi_rv, x)
-        }
+    x, num_iters, out = func(x0, A, b, mu, opts)
+    solve_time = out[ 'solve_time' ]
+    fval = out[ 'fval' ]
+    log_dict = {
+        "cpu: %5.2f": solve_time,
+        "iter: %5d": -1 if num_iters is None else num_iters,
+        "optval: %6.5E": fval,
+        "sparisity: %4.3f": sparsity(x),
+        "err-to-exact: %3.2E": errfun_exact(x),
+        "err-to-cvx-mosek: %3.2E": errfun(cvx_mosek_rv, x),
+        "err-to-cvx-gurobi: %3.2E": errfun(cvx_gurobi_rv, x)
+    }
     log_fmt = "[%-10s]: " + ', '.join(log_dict.keys( ))
     log_fags = tuple([ mode ] + list(log_dict.values( )))
     logger = logging.getLogger('opt')
     logger.info(log_fmt % log_fags)
     # plot_result(mode, os.path.join(destination_directory, "%s.svg" % mode), u, cvx_mosek_rv, cvx_gurobi_rv, x)
-    return x, num_iters, out, solve_time
+    return x, num_iters, out
 
 
 if __name__ == '__main__':
@@ -118,7 +111,7 @@ if __name__ == '__main__':
         os.makedirs(destination_directory)
         logger.info("Create directory: %s" % destination_directory)
 
-    installed_solvers = cvxpy.installed_solvers( )
+    installed_solvers = cp.installed_solvers( )
     logger.info("Installed solvers for cvxpy: " + str(installed_solvers))
 
     n, m, l, mu, A, b, u, x0, errfun, errfun_exact, sparsity = gen_data( )
@@ -132,13 +125,15 @@ if __name__ == '__main__':
     # plt.show( )
     plt.savefig(os.path.join(destination_directory, 'ground_truth.svg'))
 
-    cvx_mosek_rv, _, _, _ = cvx_solver_collection.gl_cvx_mosek( )(x0, A, b, mu, [ ])
-    cvx_gurobi_rv, _, _, _ = cvx_solver_collection.gl_cvx_gurobi( )(x0, A, b, mu, [ ])
+    cvx_mosek_rv, _, _ = gl_cvx_mosek(x0, A, b, mu, [ ])
+    cvx_gurobi_rv, _, _ = gl_cvx_gurobi(x0, A, b, mu, [ ])
     solvers = {
-        'CVX-Mosek': cvx_solver_collection.gl_cvx_mosek( ),
-        'CVX-Gurobi': cvx_solver_collection.gl_cvx_gurobi( ),
-        'Mosek': mosek_solver_collection.gl_mosek( ),
-        'Gurobi': gurobi_solver_collection.gl_gurobi(),
+        'CVX-Mosek': gl_cvx_mosek,
+        'CVX-Gurobi': gl_cvx_gurobi,
+        'Mosek': gl_mosek,
+        'Gurobi': gl_gurobi,
+        # 'SGD Primal': subgradient_method.subgradient_method(gamma=1e-4, max_iter=10000, stop_ratio=1e-5,
+        #                                                             stable_len_threshold=100)
     }
     for mode, solver in solvers.items( ):
         solve_routine(mode, solver, x0, A, b, mu, [ ], u, errfun, errfun_exact, sparsity)

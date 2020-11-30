@@ -1,6 +1,7 @@
 import numpy as np
 from numpy import random
 from numpy.linalg import norm
+import numpy.linalg as LA
 import argparse
 import logging
 import os
@@ -10,11 +11,18 @@ from gl_cvx_gurobi import gl_cvx_gurobi
 from gl_cvx_mosek import gl_cvx_mosek
 from gl_gurobi import gl_gurobi
 from gl_mosek import gl_mosek
+from gl_SGD_primal import gl_SGD_primal
 
 
 # min 0.5 * ||A * x - b||_2^2 + mu * ||x||_{1,2}
 # Credit to
 #   http://niaohe.ise.illinois.edu/IE598_2016/lasso_demo/index.html
+
+def obj_func(x: np.ndarray):
+    temp = np.matmul(A, x) - b
+    fro_term = 0.5 * np.sum(np.multiply(temp, temp))
+    regular_term = np.sum(np.apply_along_axis(func1d=lambda row: LA.norm(row), axis=1, arr=x))
+    return fro_term + mu * regular_term
 
 def gen_data():
     seed = 97006855
@@ -74,8 +82,8 @@ cvx_mosek_rv, cvx_gurobi_rv = None, None
 
 def solve_routine(mode: str, func, x0, A, b, mu, opts, u, errfun, errfun_exact, sparsity):
     x, num_iters, out = func(x0, A, b, mu, opts)
-    solve_time = out[ 'solve_time' ]
-    fval = out[ 'fval' ]
+    solve_time = out[ "tt" ]
+    fval = out[ "fval" ]
     log_dict = {
         "cpu: %5.2f": solve_time,
         "iter: %5d": -1 if num_iters is None else num_iters,
@@ -103,7 +111,7 @@ if __name__ == '__main__':
     log_file_path = args.log
     destination_directory = args.dest_dir
 
-    setup_logger("opt", log_file_path)
+    setup_logger("opt", log_file_path, level=logging.INFO)
     logger = logging.getLogger('opt')
     logger.info("========================== New Log ========================================")
 
@@ -125,15 +133,32 @@ if __name__ == '__main__':
     # plt.show( )
     plt.savefig(os.path.join(destination_directory, 'ground_truth.svg'))
 
-    cvx_mosek_rv, _, _ = gl_cvx_mosek(x0, A, b, mu, [ ])
-    cvx_gurobi_rv, _, _ = gl_cvx_gurobi(x0, A, b, mu, [ ])
+    cvx_mosek_rv, _, _ = gl_cvx_mosek(x0, A, b, mu, {})
+    cvx_gurobi_rv, _, _ = gl_cvx_gurobi(x0, A, b, mu, {})
     solvers = {
         'CVX-Mosek': gl_cvx_mosek,
         'CVX-Gurobi': gl_cvx_gurobi,
-        'Mosek': gl_mosek,
-        'Gurobi': gl_gurobi,
-        # 'SGD Primal': subgradient_method.subgradient_method(gamma=1e-4, max_iter=10000, stop_ratio=1e-5,
-        #                                                             stable_len_threshold=100)
+        # 'Mosek': gl_mosek,
+        # 'Gurobi': gl_gurobi,
+        'SGD Primal': gl_SGD_primal,
     }
+
+    f_hists = {}
     for mode, solver in solvers.items( ):
-        solve_routine(mode, solver, x0, A, b, mu, [ ], u, errfun, errfun_exact, sparsity)
+        _, _, out = solve_routine(mode, solver, x0, A, b, mu, {}, u, errfun, errfun_exact, sparsity)
+        if 'f_hist' in out:
+            f_hists[mode] = out["f_hist"]
+
+    file_name = 'relative_error.svg'
+    fig, ax = plt.subplots(figsize=(9, 6))
+    plot_solver_color = {
+        'SGD Primal': 'g'
+    }
+    f_star = obj_func(u)
+    for mode, f_hist in f_hists.items():
+        f_hist = (f_hist - f_star) / f_star
+        plt.semilogy(np.arange(0, len(f_hist)), np.array(f_hist), plot_solver_color[mode], linewidth=2, label=mode)
+    plt.legend(prop={'size': 12})
+    plt.ylabel('$(f(x^k)-f^*)/f^*$')
+    plt.xlabel('Iteration')
+    plt.savefig(file_name)

@@ -6,7 +6,7 @@ from utils.stopwatch import Stopwatch
 logger = logging.getLogger("opt")
 
 
-def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu, opts: dict):
+def gl_GD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu, opts: dict):
     default_opts = {
         "maxit": 5000,  # 最大迭代次数
         "thres": 1e-4,  # 判断小量是否被认为为 0 的阈值
@@ -14,6 +14,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu, opts: dict):
         "alpha0": 1e-3,  # 步长的初始值
         "ftol": 1e-5,  # 停机准则，当目标函数历史最优值的变化小于该值时认为满足
         "stable_len_threshold": 100,
+        "sigma": 1e-3,
     }
     # The second dictionary's values overwrite those from the first.
     opts = {**default_opts, **opts}
@@ -21,6 +22,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu, opts: dict):
     maxit, ftol, alpha0 = opts[ "maxit" ], opts[ "ftol" ], opts[ "alpha0" ]
     stable_len_threshold = opts[ "stable_len_threshold" ]
     thres = opts[ "thres" ]
+    sigma = opts[ 'sigma' ]
 
     out = {
         "fvec": None,  # 每一步迭代的 LASSO 问题目标函数值
@@ -34,26 +36,23 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu, opts: dict):
     def obj_func(x: np.ndarray):
         temp = np.matmul(A, x) - b
         fro_term = 0.5 * np.sum(np.multiply(temp, temp))
-        regular_term = np.sum(np.apply_along_axis(func1d=lambda row: LA.norm(row), axis=1, arr=x))
+        regular_term = np.sum(np.apply_along_axis(
+            func1d=lambda row: np.sqrt(np.multiply(row, row) + sigma * sigma) - sigma, axis=1, arr=x))
         return fro_term + mu * regular_term
 
     def subgrad(x: np.ndarray):
         fro_term_grad = np.matmul(A.transpose( ), np.matmul(A, x) - b)
-
-        def foo(row):
-            temp = LA.norm(row)
-            return np.zeros_like(row) if temp == 0 else row / temp
-
-        regular_term_grad = np.apply_along_axis(func1d=foo, axis=1, arr=x)
+        regular_term_grad = np.apply_along_axis(
+            func1d=lambda row: row / np.sqrt(np.multiply(row, row) + sigma * sigma), axis=1, arr=x)
         return fro_term_grad + mu * regular_term_grad
 
     def set_step(iter, step_type):
         if step_type == 'fixed':
             return alpha0
         elif step_type == 'diminishing':
-            return alpha0 / np.sqrt(max(iter, 100)-99)
+            return alpha0 / np.sqrt(max(iter, 100) - 99)
         elif step_type == 'diminishing2':
-            return alpha0 / (max(iter, 100)-99)
+            return alpha0 / (max(iter, 100) - 99)
         else:
             logger.error("Unsupported type.")
 
@@ -81,7 +80,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu, opts: dict):
         if stable_len > stable_len_threshold:
             break
 
-        x[np.abs(x) < thres] = 0
+        x[ np.abs(x) < thres ] = 0
         sub_g = subgrad(x)
         alpha = set_step(k, opts[ "step_type" ])
         x = x - alpha * sub_g

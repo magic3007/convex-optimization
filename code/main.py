@@ -12,6 +12,7 @@ from gl_cvx_mosek import gl_cvx_mosek
 from gl_gurobi import gl_gurobi
 from gl_mosek import gl_mosek
 from gl_SGD_primal import gl_SGD_primal
+from gl_GD_primal import gl_GD_primal
 
 
 # min 0.5 * ||A * x - b||_2^2 + mu * ||x||_{1,2}
@@ -141,6 +142,7 @@ if __name__ == '__main__':
         # 'Mosek': gl_mosek,
         # 'Gurobi': gl_gurobi,
         'SGD Primal': gl_SGD_primal,
+        "GD Primal": gl_GD_primal,
     }
 
     f_hists = {}
@@ -152,7 +154,8 @@ if __name__ == '__main__':
     file_name = 'relative_error.svg'
     fig, ax = plt.subplots(figsize=(9, 6))
     plot_solver_color = {
-        'SGD Primal': 'g'
+        'SGD Primal': 'g',
+        "GD Primal": 'b',
     }
     f_star = obj_func(u)
     for mode, f_hist in f_hists.items():

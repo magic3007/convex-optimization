@@ -17,7 +17,7 @@ def gl_cvx_mosek(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu, opts):
     solve_time = prob.solver_stats.solve_time
     num_iters = prob.solver_stats.num_iters
     out = {
-        "solve_time": solve_time,
+        "tt": solve_time,
         "fval": prob.value
     }
     return np.array(x.value), num_iters, out

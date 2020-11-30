@@ -37,6 +37,6 @@ def gl_mosek(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu, opts):
 
         out = {
             "fval": fval,
-            "solve_time": solve_time
+            "tt": solve_time
         }
         return rv, num_iters, out

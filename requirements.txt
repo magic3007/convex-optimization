@@ -1,0 +1,5 @@
+numpy~=1.19.4
+cvxpy~=1.1.7
+matplotlib~=3.3.3
+Mosek~=9.2.29
+gurobipy~=9.1.0

@@ -8,7 +8,7 @@ logger = logging.getLogger("opt")
 
 def gl_GD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict):
     default_opts = {
-        "maxit": 2100,  # 最大迭代次数
+        "maxit": 2500,  # 最大迭代次数
         "thres": 1e-3,  # 判断小量是否被认为 0 的阈值
         "step_type": "diminishing",  # 步长衰减的类型（见辅助函数）
         "alpha0": 1e-3,  # 步长的初始值
@@ -24,7 +24,7 @@ def gl_GD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict)
     def real_obj_func(x: np.ndarray):
         fro_term = 0.5 * np.sum((A @ x - b) ** 2)
         regular_term = np.sum(LA.norm(x, axis=1).reshape(-1, 1))
-        return fro_term + mu * regular_term
+        return fro_term + mu_0 * regular_term
 
     out = {
         "fvec": None,  # 每一步迭代的 LASSO 问题目标函数值

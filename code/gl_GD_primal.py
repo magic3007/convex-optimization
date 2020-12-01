@@ -15,7 +15,7 @@ def gl_GD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict)
         "ftol": 1e-5,  # 停机准则，当目标函数历史最优值的变化小于该值时认为满足
         "stable_len_threshold": 100,
         "continuous_subgradient_flag": False,
-        "delta": 1e-3,
+        "delta": 1e-3,  # 光滑化参数
     }
     # The second dictionary's values overwrite those from the first.
     opts = {**default_opts, **opts}

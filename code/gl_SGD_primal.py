@@ -8,7 +8,7 @@ logger = logging.getLogger("opt")
 
 def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict):
     default_opts = {
-        "maxit": 2100,  # 最大迭代次数
+        "maxit": 2100,  # 内循环最大迭代次数
         "thres": 1e-3,  # 判断小量是否被认为 0 的阈值
         "step_type": "diminishing",  # 步长衰减的类型（见辅助函数）
         "alpha0": 1e-3,  # 步长的初始值
@@ -60,10 +60,10 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict
             grad = fro_term_grad + mu * regular_term_grad
             return grad
 
-        inner_iter = 0
+        inn_iter = 0
 
         def set_step(step_type):
-            iter_hat = max(inner_iter, 1000) - 999
+            iter_hat = max(inn_iter, 1000) - 999
             if step_type == 'fixed' or mu > mu_0:
                 return alpha0
             elif step_type == 'diminishing':
@@ -73,7 +73,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict
             else:
                 logger.error("Unsupported type.")
 
-        while inner_iter < maxit:
+        while inn_iter < maxit:
             # Record current objective value
             f_now = obj_func(x)
             f_hist.append(f_now)
@@ -81,7 +81,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict
             f_best = min(f_best, f_now)
             f_hist_best.append(f_best)
             k += 1
-            inner_iter += 1
+            inn_iter += 1
 
             if k > 1 and abs(f_hist[ k - 1 ] - f_hist[ k - 2 ]) / abs(f_hist[ k - 2 ]) < ftol:
                 stable_len += 1

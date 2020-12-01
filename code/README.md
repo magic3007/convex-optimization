@@ -12,6 +12,7 @@
   matplotlib~=3.3.3
   Mosek~=9.2.29
   gurobipy~=9.1.0
+  pytablewriter~=0.58.0
   ```
 
 ## Install

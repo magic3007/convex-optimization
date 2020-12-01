@@ -33,7 +33,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict
     thres = opts[ "thres" ]
 
     if opts[ "continuous_subgradient_flag" ] is True:
-        L = np.max(LA.eigvals(A.transpose( ) @ A))
+        L = np.max(LA.eigvals(A.T @ A))
         alpha0 = 1. / L.real
 
     logger.debug("alpha0= {:10E}".format(alpha0))
@@ -45,7 +45,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict
     stopwatch.start( )
     k = 0
     stable_len = 0
-    for mu in [mu_0]:
+    for mu in [100*mu_0, 50*mu_0, 25*mu_0, 10*mu_0, mu_0]:
         logger.debug("new mu= {:10E}".format(mu))
 
         def obj_func(x: np.ndarray):
@@ -74,7 +74,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict
             else:
                 logger.error("Unsupported type.")
 
-        while k < maxit:
+        while inner_iter < maxit:
             # Record current objective value
             f_now = obj_func(x)
             f_hist.append(f_now)
@@ -96,7 +96,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict
             alpha = set_step(opts[ "step_type" ])
             x = x - alpha * sub_g
 
-            if k % 10 == 0:
+            if k % 100 == 0:
                 logger.debug('iter= {:5}, objective= {:10E}'.format(k, f_now.item( )))
 
     elapsed_time = stopwatch.elapsed(time_format=Stopwatch.TimeFormat.kMicroSecond) / 1e6

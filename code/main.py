@@ -106,7 +106,8 @@ def solve_routine(mode: str, func, x0, A, b, mu, opts, u, errfun, errfun_exact, 
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='A demo that solves the optimization problem '
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                                     description='A demo that solves the optimization problem '
                                                  '$\min_x{0.5 * ||A * x - b||_2^2 + mu * ||x||_{1,2}}$')
     parser.add_argument('--log', type=str, default='opt.log', help='Path to the logging file.')
     parser.add_argument('--dest_dir', type=str, default='figures', help='Destination directory.')

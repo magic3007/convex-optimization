@@ -8,7 +8,7 @@ logger = logging.getLogger("opt")
 
 def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict):
     default_opts = {
-        "maxit": 5000,  # 最大迭代次数
+        "maxit": 20000,  # 最大迭代次数
         "thres": 1e-3,  # 判断小量是否被认为为 0 的阈值
         "step_type": "diminishing",  # 步长衰减的类型（见辅助函数）
         "alpha0": 1e-3,  # 步长的初始值

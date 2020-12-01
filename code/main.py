@@ -90,7 +90,7 @@ def solve_routine(mode: str, func, x0, A, b, mu, opts, u, errfun, errfun_exact, 
         "cpu: %5.2f": solve_time,
         "iter: %5d": -1 if num_iters is None else num_iters,
         "optval: %6.5E": fval,
-        "sparisity: %4.3f": sparsity(x),
+        "sparsity: %4.3f": sparsity(x),
         "err-to-exact: %3.2E": errfun_exact(x),
         "err-to-cvx-mosek: %3.2E": errfun(cvx_mosek_rv, x),
         "err-to-cvx-gurobi: %3.2E": errfun(cvx_gurobi_rv, x)
@@ -143,7 +143,7 @@ if __name__ == '__main__':
         # 'Mosek': gl_mosek,
         # 'Gurobi': gl_gurobi,
         'SGD Primal': gl_SGD_primal,
-        "GD Primal": gl_GD_primal,
+        # "GD Primal": gl_GD_primal,
     }
 
     f_hists = {}

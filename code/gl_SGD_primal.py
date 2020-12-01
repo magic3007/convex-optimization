@@ -8,17 +8,17 @@ logger = logging.getLogger("opt")
 
 def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict):
     default_opts = {
-        "maxit": 5000,  # 最大迭代次数
-        "thres": 1e-3,  # 判断小量是否被认为为 0 的阈值
+        "maxit": 2500,  # 最大迭代次数
+        "thres": 1e-3,  # 判断小量是否被认为 0 的阈值
         "step_type": "diminishing",  # 步长衰减的类型（见辅助函数）
         "alpha0": 1e-3,  # 步长的初始值
         "ftol": 1e-5,  # 停机准则，当目标函数历史最优值的变化小于该值时认为满足
         "stable_len_threshold": 100,
-        "continuous_subgradient_flag": False
+        "continuous_subgradient_flag": False,
     }
     # The second dictionary's values overwrite those from the first.
     opts = {**default_opts, **opts}
-
+    sparsity_func = lambda x: np.sum(np.abs(x) > 1e-6 * np.max(np.abs(x))) / x.size
     out = {
         "fvec": None,  # 每一步迭代的 LASSO 问题目标函数值
         "grad_hist": None,  # 可微部分梯度范数的历史值
@@ -45,12 +45,11 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict
     stopwatch.start( )
     k = 0
     stable_len = 0
-    for mu in [100*mu_0, 10*mu_0, mu_0]:
+    for mu in [ 100 * mu_0, 10 * mu_0, mu_0 ]:
         logger.debug("new mu= {:10E}".format(mu))
 
         def obj_func(x: np.ndarray):
-            temp = A @ x - b
-            fro_term = 0.5 * np.sum(temp ** 2)
+            fro_term = 0.5 * np.sum((A @ x - b) ** 2)
             regular_term = np.sum(LA.norm(x, axis=1).reshape(-1, 1))
             return fro_term + mu * regular_term
 
@@ -97,7 +96,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict
             x = x - alpha * sub_g
 
             if k % 100 == 0:
-                logger.debug('iter= {:5}, objective= {:10E}'.format(k, f_now.item( )))
+                logger.debug('iter= {:5}, objective= {:10E}, sparsity= {:3f}'.format(k, f_now.item( ), sparsity_func(x)))
 
     elapsed_time = stopwatch.elapsed(time_format=Stopwatch.TimeFormat.kMicroSecond) / 1e6
     out = {

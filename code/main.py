@@ -25,6 +25,7 @@ def obj_func(x: np.ndarray):
     regular_term = np.sum(np.apply_along_axis(func1d=lambda row: LA.norm(row), axis=1, arr=x))
     return fro_term + mu * regular_term
 
+
 def gen_data():
     seed = 97006855
     n, m, l = 512, 256, 2
@@ -56,25 +57,26 @@ def setup_logger(logger_name, log_file, level=logging.INFO):
 
 
 def plot_result(mode: str, file_name: str, ground_truth, cvx_mosek_rv, cvx_gurobi_rv, x):
-    plt.clf()
+    plt.clf( )
     fig = plt.figure(1)
 
     plt.subplot(2, 1, 1)
     plt.plot(np.arange(0, n, 1), ground_truth[ :, 0 ], 'r*', label='ground truth')
-    plt.plot(np.arange(0, n, 1), cvx_mosek_rv[ :, 0 ], 'g^', label='CVX-Mosek')
-    plt.plot(np.arange(0, n, 1), cvx_gurobi_rv[ :, 0 ], 'bv', label='CVX-Gurobi')
+    # plt.plot(np.arange(0, n, 1), cvx_mosek_rv[ :, 0 ], 'g^', label='CVX-Mosek')
+    # plt.plot(np.arange(0, n, 1), cvx_gurobi_rv[ :, 0 ], 'bv', label='CVX-Gurobi')
     plt.plot(np.arange(0, n, 1), x[ :, 0 ], 'mo', label=mode)
     plt.xlim(0, n)
     plt.title('Results on the 1st dimension')
 
     plt.subplot(2, 1, 2)
     plt.plot(np.arange(0, n, 1), ground_truth[ :, 1 ], 'r*', label='ground truth')
-    plt.plot(np.arange(0, n, 1), cvx_mosek_rv[ :, 1 ], 'g^', label='CVX-Mosek')
-    plt.plot(np.arange(0, n, 1), cvx_gurobi_rv[ :, 1 ], 'bv', label='CVX-Gurobi')
+    # plt.plot(np.arange(0, n, 1), cvx_mosek_rv[ :, 1 ], 'g^', label='CVX-Mosek')
+    # plt.plot(np.arange(0, n, 1), cvx_gurobi_rv[ :, 1 ], 'bv', label='CVX-Gurobi')
     plt.plot(np.arange(0, n, 1), x[ :, 1 ], 'mo', label=mode)
     plt.xlim(0, n)
     plt.title('Results on the 2nd dimension')
 
+    plt.tight_layout( )
     plt.show( )
     plt.savefig(file_name)
 
@@ -113,7 +115,7 @@ if __name__ == '__main__':
     log_file_path = args.log
     destination_directory = args.dest_dir
 
-    setup_logger("opt", log_file_path, level=logging.DEBUG)
+    setup_logger("opt", log_file_path, level=logging.INFO)
     logger = logging.getLogger('opt')
     logger.info("========================== New Log ========================================")
 
@@ -140,29 +142,42 @@ if __name__ == '__main__':
     solvers = {
         'CVX-Mosek': gl_cvx_mosek,
         'CVX-Gurobi': gl_cvx_gurobi,
-        # 'Mosek': gl_mosek,
-        # 'Gurobi': gl_gurobi,
+        'Mosek': gl_mosek,
+        'Gurobi': gl_gurobi,
         'SGD Primal': gl_SGD_primal,
-        # "GD Primal": gl_GD_primal,
+        "GD Primal": gl_GD_primal,
     }
 
     f_hists = {}
     for mode, solver in solvers.items( ):
         _, _, out = solve_routine(mode, solver, x0, A, b, mu, {}, u, errfun, errfun_exact, sparsity)
         if 'f_hist' in out:
-            f_hists[mode] = out["f_hist"]
+            f_hists[ mode ] = out[ "f_hist" ]
 
-    file_name = 'relative_error.svg'
-    fig, ax = plt.subplots(figsize=(9, 6))
     plot_solver_color = {
         'SGD Primal': 'g',
         "GD Primal": 'b',
     }
+
+    plt.clf( )
+    file_name = os.path.join(destination_directory, 'relative_objective.svg')
+    fig, ax = plt.subplots(figsize=(9, 6))
     f_star = obj_func(u)
-    for mode, f_hist in f_hists.items():
+    for mode, f_hist in f_hists.items( ):
         f_hist = (f_hist - f_star) / f_star
-        plt.semilogy(np.arange(0, len(f_hist)), np.array(f_hist), plot_solver_color[mode], linewidth=2, label=mode)
+        plt.semilogy(np.arange(0, len(f_hist)), np.array(f_hist), plot_solver_color[ mode ], linewidth=2, label=mode)
     plt.legend(prop={'size': 12})
     plt.ylabel('$(f(x^k)-f^*)/f^*$')
+    plt.xlabel('Iteration')
+    plt.savefig(file_name)
+
+    plt.clf( )
+    file_name = os.path.join(destination_directory, 'objective_function.svg')
+    fig, ax = plt.subplots(figsize=(9, 6))
+    f_star = obj_func(u)
+    for mode, f_hist in f_hists.items( ):
+        plt.semilogy(np.arange(0, len(f_hist)), np.array(f_hist), plot_solver_color[ mode ], linewidth=2, label=mode)
+    plt.legend(prop={'size': 12})
+    plt.ylabel('$f(x^k)$')
     plt.xlabel('Iteration')
     plt.savefig(file_name)

@@ -8,7 +8,7 @@ logger = logging.getLogger("opt")
 
 def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict):
     default_opts = {
-        "maxit": 20000,  # 最大迭代次数
+        "maxit": 5000,  # 最大迭代次数
         "thres": 1e-3,  # 判断小量是否被认为为 0 的阈值
         "step_type": "diminishing",  # 步长衰减的类型（见辅助函数）
         "alpha0": 1e-3,  # 步长的初始值
@@ -45,7 +45,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict
     stopwatch.start( )
     k = 0
     stable_len = 0
-    for mu in [100*mu_0, 50*mu_0, 25*mu_0, 10*mu_0, mu_0]:
+    for mu in [100*mu_0, 10*mu_0, mu_0]:
         logger.debug("new mu= {:10E}".format(mu))
 
         def obj_func(x: np.ndarray):
@@ -65,7 +65,7 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict
 
         def set_step(step_type):
             iter_hat = max(inner_iter, 1000) - 999
-            if step_type == 'fixed':
+            if step_type == 'fixed' or mu > mu_0:
                 return alpha0
             elif step_type == 'diminishing':
                 return alpha0 / np.sqrt(iter_hat)
@@ -107,4 +107,4 @@ def gl_SGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict
         "f_hist_best": f_hist_best
     }
 
-    return x, k + 1, out
+    return x, k, out

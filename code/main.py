@@ -56,6 +56,7 @@ def setup_logger(logger_name, log_file, level=logging.INFO):
 
 
 def plot_result(mode: str, file_name: str, ground_truth, cvx_mosek_rv, cvx_gurobi_rv, x):
+    plt.clf()
     fig = plt.figure(1)
 
     plt.subplot(2, 1, 1)

@@ -90,7 +90,7 @@ def solve_routine(mode: str, func, x0, A, b, mu, opts, u, errfun, errfun_exact, 
         "cpu: %5.2f": solve_time,
         "iter: %5d": -1 if num_iters is None else num_iters,
         "optval: %6.5E": fval,
-        "sparsity: %4.3f": sparsity(x),
+        "sparsity: %6.4f": sparsity(x),
         "err-to-exact: %3.2E": errfun_exact(x),
         "err-to-cvx-mosek: %3.2E": errfun(cvx_mosek_rv, x),
         "err-to-cvx-gurobi: %3.2E": errfun(cvx_gurobi_rv, x)
@@ -99,7 +99,7 @@ def solve_routine(mode: str, func, x0, A, b, mu, opts, u, errfun, errfun_exact, 
     log_fags = tuple([ mode ] + list(log_dict.values( )))
     logger = logging.getLogger('opt')
     logger.info(log_fmt % log_fags)
-    # plot_result(mode, os.path.join(destination_directory, "%s.svg" % mode), u, cvx_mosek_rv, cvx_gurobi_rv, x)
+    plot_result(mode, os.path.join(destination_directory, "%s.svg" % mode), u, cvx_mosek_rv, cvx_gurobi_rv, x)
     return x, num_iters, out
 
 
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     log_file_path = args.log
     destination_directory = args.dest_dir
 
-    setup_logger("opt", log_file_path, level=logging.INFO)
+    setup_logger("opt", log_file_path, level=logging.DEBUG)
     logger = logging.getLogger('opt')
     logger.info("========================== New Log ========================================")
 

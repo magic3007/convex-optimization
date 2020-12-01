@@ -8,14 +8,14 @@ logger = logging.getLogger("opt")
 
 def gl_GD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict):
     default_opts = {
-        "maxit": 2500,  # 最大迭代次数
+        "maxit": 2100,  # 最大迭代次数
         "thres": 1e-3,  # 判断小量是否被认为 0 的阈值
         "step_type": "diminishing",  # 步长衰减的类型（见辅助函数）
         "alpha0": 1e-3,  # 步长的初始值
         "ftol": 1e-5,  # 停机准则，当目标函数历史最优值的变化小于该值时认为满足
         "stable_len_threshold": 100,
         "continuous_subgradient_flag": False,
-        "delta": 1e-4,
+        "delta": 1e-3,
     }
     # The second dictionary's values overwrite those from the first.
     opts = {**default_opts, **opts}
@@ -58,7 +58,7 @@ def gl_GD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict)
 
         def subgrad(x: np.ndarray):
             fro_term_grad = A.T @ (A @ x - b)
-            regular_term_grad = x / np.sqrt(np.sum(x ** 2, axis=1).reshape(-1, 1) + delta)
+            regular_term_grad = x / np.sqrt(np.sum(x ** 2, axis=1).reshape(-1, 1) + delta * delta)
             grad = fro_term_grad + mu * regular_term_grad
             return grad
 

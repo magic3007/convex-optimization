@@ -20,7 +20,7 @@ def gl_GD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict)
     # The second dictionary's values overwrite those from the first.
     opts = {**default_opts, **opts}
     sparsity_func = lambda x: np.sum(np.abs(x) > 1e-6 * np.max(np.abs(x))) / x.size
-
+ 
     def real_obj_func(x: np.ndarray):
         fro_term = 0.5 * np.sum((A @ x - b) ** 2)
         regular_term = np.sum(LA.norm(x, axis=1).reshape(-1, 1))
@@ -35,25 +35,25 @@ def gl_GD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict)
         "flag": None  # 标记是否收敛
     }
 
-    maxit, ftol, alpha0 = opts[ "maxit" ], opts[ "ftol" ], opts[ "alpha0" ]
-    stable_len_threshold = opts[ "stable_len_threshold" ]
-    thres = opts[ "thres" ]
-    delta = opts[ "delta" ]
+    maxit, ftol, alpha0 = opts["maxit"], opts["ftol"], opts["alpha0"]
+    stable_len_threshold = opts["stable_len_threshold"]
+    thres = opts["thres"]
+    delta = opts["delta"]
 
-    if opts[ "continuous_subgradient_flag" ] is True:
+    if opts["continuous_subgradient_flag"]:
         L = np.max(LA.eigvals(A.T @ A))
         alpha0 = 1. / L.real
 
     logger.debug("alpha0= {:10E}".format(alpha0))
-    f_hist, f_hist_best = [ ], [ ]
+    f_hist, f_hist_best = [], []
     f_best = np.inf
 
     x = np.copy(x0)
-    stopwatch = Stopwatch( )
-    stopwatch.start( )
+    stopwatch = Stopwatch()
+    stopwatch.start()
     k = 0
     stable_len = 0
-    for mu in [ 100 * mu_0, 10 * mu_0, mu_0 ]:
+    for mu in [100 * mu_0, 10 * mu_0, mu_0]:
         logger.debug("new mu= {:10E}".format(mu))
 
         def subgrad(x: np.ndarray):
@@ -85,21 +85,21 @@ def gl_GD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: dict)
             k += 1
             inner_iter += 1
 
-            if k > 1 and abs(f_hist[ k - 1 ] - f_hist[ k - 2 ]) / abs(f_hist[ k - 2 ]) < ftol:
+            if k > 1 and abs(f_hist[k - 1] - f_hist[k - 2]) / abs(f_hist[k - 2]) < ftol:
                 stable_len += 1
             else:
                 stable_len = 0
             # if stable_len > stable_len_threshold:
             #     break
 
-            x[ np.abs(x) < thres ] = 0
+            x[np.abs(x) < thres] = 0
             sub_g = subgrad(x)
-            alpha = set_step(opts[ "step_type" ])
+            alpha = set_step(opts["step_type"])
             x = x - alpha * sub_g
 
             if k % 100 == 0:
                 logger.debug(
-                    'iter= {:5}, objective= {:10E}, sparsity= {:3f}'.format(k, f_now.item( ), sparsity_func(x)))
+                    'iter= {:5}, objective= {:10E}, sparsity= {:3f}'.format(k, f_now.item(), sparsity_func(x)))
 
     elapsed_time = stopwatch.elapsed(time_format=Stopwatch.TimeFormat.kMicroSecond) / 1e6
     out = {

@@ -103,7 +103,7 @@ with gp.Model('Gurobi', env=env) as M:
 >
 > (b) Gradient method for the smoothed primal problem.
 
- 首先给出这两个问题的数学形式. 对于问题(a), 设目标函数为$$f(x)=\frac{1}{2}\left \| Ax-b \right \|_F^2+\mu \left \| x \right \|_{1,2}$$. 其中$\left \| Ax-b \right \|_F^2$部分可导, 其次梯度为$\partial \left \| Ax-b \right \|_F^2 = \{A^T(Ax-b)\}$. 对于$\left \| x \right \|_{1,2}$我们分行考虑次梯度. 对于行向量$x(i,1:l)(1 \leq i \leq n)$的范数$\left \| x(i,1:l) \right \|_2$, 其在$x(i,1:l)=0$处不可微, 经过计算我们可以求出在$0$是$x(i,1:l)=0$时的次梯度, 即
+ 首先给出这两个问题的数学形式. 对于问题(a), 设目标函数为$f(x)=\frac{1}{2}\left \| Ax-b \right \|_F^2+\mu \left \| x \right \|_{1,2}$. 其中$\left \| Ax-b \right \|_F^2$部分可导, 其次梯度为$\partial \left \| Ax-b \right \|_F^2 = \{A^T(Ax-b)\}$. 对于$\left \| x \right \|_{1,2}$我们分行考虑次梯度. 对于行向量$x(i,1:l)(1 \leq i \leq n)$的范数$\left \| x(i,1:l) \right \|_2$, 其在$x(i,1:l)=0$处不可微, 经过计算我们可以求出在$0$是$x(i,1:l)=0$时的次梯度, 即
 $$
 \partial \left \| x(i,1:l) \right \|_2 =\left\{
 \begin{aligned}
@@ -216,7 +216,7 @@ $$
             return grad
 ```
 
-以下列出两种实现的统计数据. 在默认随机种子下, 相比于CVX mosek/gurobi, 其运行时间, 稀疏程度, 恢复效果, 迭代次数等如下. 其中运行时间约CVX-Gurobi的三倍, 最优函数值与CVX mosek/gurobi相当, 稀疏程度达到构造数据时期望的0.1, 甚至小于CVX mosek/gurobi的稀疏程度, 与CVX mosek/gurobi的恢复效果也相当接近.
+以下列出这两个问题的统计数据. 在默认随机种子下, 相比于CVX mosek/gurobi, 其运行时间, 稀疏程度, 恢复效果, 迭代次数等如下. 其中运行时间约CVX-Gurobi的三倍, 最优函数值与CVX mosek/gurobi相当, 稀疏程度达到构造数据时期望的0.1, 甚至小于CVX mosek/gurobi的稀疏程度, 与CVX mosek/gurobi的恢复效果也相当接近.
 
 | solver     | cpu  | iter | optval      | sparsity | err-to-exact | err-to-cvx-mosek | err-to-cvx-gurobi |
 | ---------- | ---- | ---- | ----------- | -------- | ------------ | ---------------- | ----------------- |
@@ -242,3 +242,204 @@ SGD Primal和GD Primal的结果与ground truth $u$的比较如下. 我们可以�
 | CVX-Gurobi | 0.70 | -1   | 6.19068E-01 | 0.1064   | 4.10E-05     | 8.48E-07         | 0.00E+00          |
 | SGD Primal | 2.09 | 6300 | 6.19068E-01 | 0.0996   | 3.97E-05     | 1.21E-06         | 1.84E-06          |
 | GD Primal  | 2.43 | 7500 | 6.19068E-01 | 0.0996   | 3.97E-05     | 1.21E-06         | 1.84E-06          |
+
+
+
+## Problem #3 (c) (d) & (e)
+
+> (c) Fast (Nesterov/accelerated) gradient method for the smoothed primal problem.
+> 
+> (d) Proximal gradient method for the primal problem.
+> 
+> (e) Fast proximal gradient method for the primal problem.
+
+**(c)**  首先讨论在光滑化后的问题上使用Nesterov梯度算法, 此部分代码在[gl_FGD_primal.py](https://github.com/magic3007/convex-optimization/blob/main/code/gl_FGD_primal.py)中. 原目标函数经过光滑化后为
+$$
+f(x)=\frac{1}{2}\left \| Ax-b \right\|_F^2+\mu \sum\limits_{i=1}^{n}(\sqrt{ \left\| x(i;1:l) \right\| _2^2+\delta^2} - \delta)
+$$
+
+其中$\delta > 0$ 为光滑化参数. 经过光滑化后, 整个目标函数处处光滑, 类似于Nesterov梯度算法的常见形式. 我们可以将光滑化后的优化问题写为 
+$$
+\min f(x)=g(x)+h(x)
+$$
+其中$g(x)=f(x)$是光滑的凸函数, $h(x)=0$是闭凸函数. 容易写出此时$h(x)$的近似点算子即为$ prox_{th}(x)=x$.此部分在代码中核心部分如下:
+
+```python
+        def g_func(x: np.ndarray):
+            fro_term = 0.5 * np.sum((A @ x - b) ** 2)
+            regular_term = np.sum(np.sqrt(np.sum(x ** 2, axis=1).reshape(-1, 1) + delta * delta) - delta)
+            return fro_term + mu * regular_term
+
+        def grad_g_func(x: np.ndarray):
+            fro_term_grad = A.T @ (A @ x - b)
+            regular_term_grad = x / np.sqrt(np.sum(x ** 2, axis=1).reshape(-1, 1) + delta * delta)
+            return fro_term_grad + mu * regular_term_grad
+
+      	......
+
+        def prox_th(x: np.ndarray, t):
+            """ Proximal operator of t * mu * h(x).
+            """
+            return x
+```
+
+不妨设选择$v^{(0)}=x^{(0)}$, 以及定义$\theta_k=\frac{2}{k+1}$, 重复以下的迭代过程:
+$$
+\begin{align*}
+y       &= (1-\theta_k)x^{(k-1)} + \theta_kv^{(k-1)} \\
+x^{(k)} &= prox_{t_k h}(y-t_k\nabla g(y)) \\
+v^{(k)} &= x^{(k-1)} + \frac{1}{\theta_k}(x^{(k)} - x^{(k-1)})
+\end{align*}
+$$
+其中$t_k$通过线搜索的方式得到. 此部分的核心代码如下:
+
+```python
+theta = 2 / (inner_iter + 1)
+y = (1 - theta) * x_k + theta * v_k
+grad_g_y = grad_g_func(y)
+
+t = set_step(step_type)
+x = prox_th(y - t * grad_g_y, t)
+v = x_k + (x - x_k) / theta
+
+x_k, v_k, t_k = x, v, t
+```
+
+**(d)** 线搜索部分的算法框架与核心代码如下:
+$$
+\begin{array}{l}
+t := t_{k-1} \quad\left(\text { define } t_{0}=\hat{t}>0\right) \\
+x := \operatorname{prox}_{t h}(y-t \nabla g(y)) \\
+\text { while } g(x)>g(y)+\nabla g(y)^{T}(x-y)+\frac{1}{2 t}\|x-y\|_{2}^{2} \\
+\qquad \begin{aligned}
+t &:=\beta t \\
+x &:=\operatorname{prox}_{t h}(y-t \nabla g(y))
+\end{aligned}
+\end{array}
+$$
+
+```python
+t = t_k
+g_y = g_func(y)
+grad_g_y = grad_g_func(y)
+
+def stop_condition(t):
+    x = prox_th(y - t * grad_g_y, t)
+    g_x = g_func(x)
+    return g_x <= g_y + np.sum(grad_g_y * (x - y)) + np.sum((x - y) ** 2) / (2 * t)
+
+for i in range(max_line_search_iter):
+    if stop_condition(t):
+        break
+    t *= aten_coeffi
+return t
+```
+
+近似点梯度算法的代码在[gl_ProxGD_primal.py](https://github.com/magic3007/convex-optimization/blob/main/code/gl_ProxGD_primal.py)中. 对于原目标函数$f(x)=\frac{1}{2}\left \| Ax-b \right\|_F^2+\mu \sum\limits_{i=1}^{n}\left\| x(i;1:l) \right\|_2$, 我们将优化问题重写为:
+$$
+\min f(x)=g(x)+h(x)
+$$
+其中$g(x)=\frac{1}{2}\left \| Ax-b \right\|_F^2$是光滑的凸函数, $h(x)=\mu \sum\limits_{i=1}^{n}\left\| x(i;1:l) \right\|_2$是强凸函数. 容易证明$p(x)=\left\| x \right\|_2$的近似点算子为:
+$$
+\operatorname{prox}_{t p}(x)=\left\{\begin{array}{cc}
+\left(1-t /\|x\|_{2}\right) x & \|x\|_{2} \geq t \\
+0 & \text { otherwise }
+\end{array}\right.
+$$
+对于$h(x)$, 我们对$x$的每一行按照如上方式即可求得$h(x)$的近似点算子$porx_{th}(x)$, 其核心代码如下:
+
+```python
+def prox_th(x: np.ndarray, t):
+    """ Proximal operator of t * mu * h(x).
+    """
+    t_mu = t * mu
+    row_norms = LA.norm(x, axis=1).reshape(-1, 1)
+    rv = x * np.clip(row_norms - t_mu, a_min=0, a_max=None) / ((row_norms < thres) + row_norms)
+    return rv
+```
+
+近似点梯度法的迭代方式为:
+$$
+x^{(k)}=\operatorname{prox}_{t_{k} h}\left(x^{(k-1)}-t_k \nabla g\left(x^{(k-1)}\right)\right), \quad k \geq 1
+$$
+其中$t_k$通过线搜索的方式得到, 其算法框架与核心代码为:
+$$
+\begin{array}{l}
+\text { define } G_{t}(x)=\frac{1}{t}\left(x-\operatorname{prox}_{t h}(x-t \nabla g(x))\right)\\
+t := \hat{t} > 0 \\
+\text { while } g(x-tG_t(x))>g(x) -t\nabla g(x)^{T}G_t(x)+\frac{t}{2}\|G_t(x)\|_{2}^{2} \\
+\qquad \begin{aligned}
+t &:=\beta t \\
+\end{aligned}
+\end{array}
+$$
+
+```python
+ g_x = g(x)
+
+def stop_condition(x, t):
+    gt_x = Gt(x, t)
+    return (g(x - t * gt_x)
+            <= g_x - t * np.sum(grad_g * gt_x) + 0.5 * t * np.sum(gt_x ** 2))
+
+alpha = alpha0
+for i in range(max_line_search_iter):
+    if stop_condition(x, alpha):
+        break
+    alpha *= aten_coeffi
+return alpha
+```
+
+```
+g_x = g(x)
+
+def stop_condition(x, t):
+    gt_x = Gt(x, t)
+    return (g(x - t * gt_x)
+            <= g_x - t * np.sum(grad_g * gt_x) + 0.5 * t * np.sum(gt_x ** 2))
+
+alpha = alpha0
+for i in range(max_line_search_iter):
+    if stop_condition(x, alpha):
+        break
+    alpha *= aten_coeffi
+return alpha
+```
+
+**(e)** 在原问题上使用Nesterov梯度算法见[gl_FProxGD_primal.py](https://github.com/magic3007/convex-optimization/blob/main/code/gl_FProxGD_primal.py).基本与问题(c)类似, 我们仅仅需要重新定义优化问题:
+$$
+\min f(x)=g(x)+h(x)
+$$
+其中$g(x)=\frac{1}{2}\left \| Ax-b \right\|_F^2$是光滑的凸函数, $h(x)=\mu \sum\limits_{i=1}^{n}\left\| x(i;1:l) \right\|_2$是强凸函数, 其与问题(c)主要不同的代码如下:
+
+```python
+def g_func(x: np.ndarray):
+    return 0.5 * np.sum((A @ x - b) ** 2)
+
+def grad_g_func(x: np.ndarray):
+    return A.T @ (A @ x - b)
+
+......
+
+def prox_th(x: np.ndarray, t):
+    """ Proximal operator of t * mu * h(x).
+    """
+    t_mu = t * mu
+    row_norms = LA.norm(x, axis=1).reshape(-1, 1)
+    rv = x * np.clip(row_norms - t_mu, a_min=0, a_max=None) / ((row_norms < thres) + row_norms)
+    return rv
+```
+
+以下列出了问题(a)-(e)得到的图表和统计数据. 在默认随机种子下, 相比于CVX mosek/gurobi, 其运行时间, 稀疏程度, 恢复效果, 迭代次数等如下. 我们可以看到在原问题上使用近似点梯度算法和Nesterov梯度算法具有较小的迭代数和较小的运行时间, 从统计数据上看基本达到和次梯度法相近的解, 但运行时间要小得多.
+
+![relative_objective_a_e](report.assets/relative_objective_a_e.svg)
+
+| solver         | cpu  | iter | optval      | sparsity | err-to-exact | err-to-cvx-mosek | err-to-cvx-gurobi |
+| -------------- | ---- | ---- | ----------- | -------- | ------------ | ---------------- | ----------------- |
+| CVX-Mosek      | 0.32 | -1   | 6.10377E-01 | 0.1201   | 4.02E-05     | 0.00E+00         | 3.33E-07          |
+| CVX-Gurobi     | 0.73 | -1   | 6.10377E-01 | 0.1211   | 4.03E-05     | 3.33E-07         | 0.00E+00          |
+| SGD Primal     | 2.02 | 6300 | 6.10378E-01 | 0.0996   | 3.79E-05     | 4.30E-06         | 4.43E-06          |
+| GD Primal      | 2.41 | 7500 | 6.10378E-01 | 0.0996   | 3.79E-05     | 4.31E-06         | 4.44E-06          |
+| FGD Primal     | 1.24 | 2037 | 6.10378E-01 | 0.1221   | 4.21E-05     | 2.39E-06         | 2.27E-06          |
+| ProxGD Primal  | 1.53 | 1768 | 6.10377E-01 | 0.0996   | 3.79E-05     | 4.38E-06         | 4.52E-06          |
+| FProxGD Primal | 1.09 | 1721 | 6.10377E-01 | 0.0996   | 3.79E-05     | 4.38E-06         | 4.52E-06          |

@@ -90,8 +90,6 @@ def gl_ProxGD_primal(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu_0, opts: d
                     gt_x = Gt(x, t)
                     return (g(x - t * gt_x)
                             <= g_x - t * np.sum(grad_g * gt_x) + 0.5 * t * np.sum(gt_x ** 2))
-                    # temp = prox_th(x - t * grad_g, t)
-                    # return real_obj_func(temp) < real_obj_func(x)
 
                 alpha = alpha0
                 for i in range(max_line_search_iter):

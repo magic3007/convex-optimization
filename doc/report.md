@@ -473,39 +473,45 @@ $$
 $$
 \begin{aligned}
 \min_{z,u} &\  g(z)+\langle b,z\rangle \\
-\text{s.t.} &\ u+A^Tz=0 \\
-&\ 1 - \lVert u_i \rVert_2\geq 0, i=1,\ldots, n
+\text{s.t.} &\ u+A^Tz =0 \\
+&\lVert u_i \rVert_2 \leq 1,\ i=1,\ldots, n
 \end{aligned}
 $$
-引入辅助变量$v_i = \lVert u_i \rVert_2 - 1$, 得到:
-$$
-\begin{aligned}
-\min_{z,u,v} &\  g(z)+\langle b,z\rangle \\
-\text{s.t.}\ &u+A^Tz &= 0 \\
-\ &1-\lVert u_i \rVert_2 - v_i &= 0 \\
-\ &v_i &\geq 0
-\end{aligned}
-$$
+
 其增广拉格朗日函数为:
 $$
 \begin{aligned}
-L_t(z, u,v, \lambda, \omega)&=g(z)+\langle b,z \rangle - \langle \lambda, u+A^Tz \rangle - \sum \omega_i(1-\lVert u_i \rVert_2 - v_i) + \frac{t}{2}\lVert u+A^Tz\rVert_F^2 + \frac{t}{2}\sum(1-\lVert u_i \rVert_2 - v_i)^2\\
-\text{s.t.}\ v_i &\geq 0
+L_t(z,u,\lambda)&=g(z)+\langle b,z \rangle - \langle \lambda, u+A^Tz \rangle + \frac{t}{2}\lVert u+A^Tz\rVert_F^2\\
+\text{s.t.}\ \lVert u_i \rVert_2& \leq 1,\ i=1,\ldots, n\\
+
 \end{aligned}
 $$
-
-
-根据一阶条件$\frac{\partial L_t(z, u,v, \lambda, \omega)}{\partial v}=0$可得到$v_i=\max(1-\lVert u_i \rVert_2-\frac{w_i}{t},0)$.  故可消去$v$.
-$$
-L_t(z,u,\lambda, \omega)=g(z)+\langle b,z \rangle - \langle \lambda, u+A^Tz \rangle + \frac{t}{2}\lVert u+A^Tz\rVert_F^2  + \sum \phi(1-\lVert u_i \rVert_2, w_i, t)
-$$
-其中$\phi(1-\lVert u_i \rVert_2, w_i, t)=\left \{ \begin{aligned} -\omega_i(1-\lVert u_i \rVert_2)+\frac{t}{2}(1-\lVert u_i \rVert_2)^2,&\ 1-\lVert u_i \rVert_2-\frac{w_i}{t} \leq 0	 \\ -\frac{w_i^2}{2t},&\ otherwise \end{aligned} \right.$
-
-更新方式为:
+迭代方式为:
 $$
 \begin{aligned}
-z^{k+1}, u^{k+1} &= argmin_{z,u} L_t(z,u,\lambda^{k}, \lambda^{w}) \\
+z^{k+1}, u^{k+1} &= arg\min_{z,u, \lVert u_i \rVert_2 \leq 1} L_t(z,u,\lambda^{k}) \\
 \lambda^{k+1} &= \lambda^k - \frac{t}{2}(u^{k+1}+A^Tz^{k+1}) \\
-\omega^{k+1} &= \max(\omega^{k}-t(1-\lVert u^{k+1}_i \rVert_2), 0)
 \end{aligned}
 $$
+
+其中还需要对下式求出显式解:
+$$
+\begin{aligned}
+z^{k+1}, u^{k+1} &= arg\min_{z,u, \lVert u_i \rVert_2 \leq 1} L_t(z,u,\lambda^{k}) \\
+&= arg\min_{z,u, \lVert u_i \rVert_2 \leq 1} \frac{1}{2}\lVert z \rVert_F^2+\langle b,z \rangle - \langle \lambda^k, u+A^Tz \rangle + \frac{t}{2}\lVert u+A^Tz\rVert_F^2 \\
+&= arg\min_{z,u, \lVert u_i \rVert_2 \leq 1} \frac{1}{2}\lVert z \rVert_F^2+\langle b,z \rangle + \frac{t}{2}\lVert u+A^Tz - \frac{1}{t}\lambda^k\rVert_F^2\\
+\end{aligned}
+$$
+由KKT条件得到:
+$$
+\begin{aligned}
+u^{k+1} = \mathcal{P}_B(\frac{1}{t}\lambda^k-A^Tz) \\
+z^{k+1} =  (1+tAA^T)^{-1}(A\lambda^k-tAu^{k+1}-b) \\
+\end{aligned}
+$$
+其中$\mathcal{P}_B(x)$为投影算子, 其为:
+$$
+\mathcal{P}_B^i(x) = \frac{x}{max(1, \lVert x\rVert_2)}
+$$
+为了加快速度, 不妨对$AA^T$进行特征值分解,  设$AA^T=Q\Lambda Q^T$,  则$(1+tAA^T)^{-1}=Q(I+t\Lambda)^{-1}Q^T$, 其中$(I+t\Lambda)^{-1}$易求.
+

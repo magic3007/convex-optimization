@@ -33,6 +33,7 @@ def gen_data(seed=97006855):
 ```
 
 ## Problem #1
+
 > Solve (1.1) using CVX by calling different solvers `mosek` and `gurobi`.
 
 我们在python中使用了[`cvxpy`](https://www.cvxpy.org/)来调用CVX, 并分别设置了使用`mosek`和`gurobi`来求解题目的优化问题, 相关代码分别为[gl_cvx_mosek.py](https://github.com/magic3007/convex-optimization/blob/main/code/gl_cvx_mosek.py)和[gl_cvx_gurobi.py](https://github.com/magic3007/convex-optimization/blob/main/code/gl_cvx_gurobi.py).
@@ -443,3 +444,68 @@ def prox_th(x: np.ndarray, t):
 | FGD Primal     | 1.24 | 2037 | 6.10378E-01 | 0.1221   | 4.21E-05     | 2.39E-06         | 2.27E-06          |
 | ProxGD Primal  | 1.53 | 1768 | 6.10377E-01 | 0.0996   | 3.79E-05     | 4.38E-06         | 4.52E-06          |
 | FProxGD Primal | 1.09 | 1721 | 6.10377E-01 | 0.0996   | 3.79E-05     | 4.38E-06         | 4.52E-06          |
+
+## Problem #4 (f)  (g) & (h)
+
+> (f) Augmented Lagrangian method for the dual problem.
+>
+> (g) Alternating direction method of multipliers for the dual problem.
+> 
+> (h) Alternating direction method of multipliers with linearization for the primal problem.
+
+首先引入约束, 构造对偶问题. 不妨设$y=Ax-b$, 原问题写成
+$$
+\begin{aligned}
+\min_{x,y} & f(x)+g(y) \\
+\text{s.t.} &\ Ax-b-y=0
+\end{aligned}
+$$
+其中$f(x)=\lVert x \rVert_{1,2}$, $g(y)=\frac{1}{2}\lVert y \rVert_F^2$, 其拉格朗日函数为
+$$
+L(x,y,z) = f(x)+g(y)+\langle z,Ax-b-y \rangle
+$$
+
+$$
+h(z)= \inf_{x,y} L(x,y,z) = - f^*(-A^Tz) - g^*(z) - \langle b,z\rangle
+$$
+
+设$p(x)=\lVert x \rVert_2(x \in R^l)$为向量的2范数, 其对偶范数为其本身, 故其共轭函数为$p^*(x)=\left \{ \begin{aligned} 0,&\ \lVert x \rVert_2 \leq 1 \\ \infty,&\ otherwise \end{aligned} \right.$. 由于$f(x)=\sum\limits_{i=1}^{n}p(x_i)$, 故$f^*(x)=\sum\limits_{i=1}^{n}p^*(x_i)$. 另一方面, 容易得到$g$的共轭函数即为自身, 即$g^*(z)=g(z)$. 故其对偶问题为:
+$$
+\begin{aligned}
+\min_{z,u} &\  g(z)+\langle b,z\rangle \\
+\text{s.t.} &\ u+A^Tz=0 \\
+&\ 1 - \lVert u_i \rVert_2\geq 0, i=1,\ldots, n
+\end{aligned}
+$$
+引入辅助变量$v_i = \lVert u_i \rVert_2 - 1$, 得到:
+$$
+\begin{aligned}
+\min_{z,u,v} &\  g(z)+\langle b,z\rangle \\
+\text{s.t.}\ &u+A^Tz &= 0 \\
+\ &1-\lVert u_i \rVert_2 - v_i &= 0 \\
+\ &v_i &\geq 0
+\end{aligned}
+$$
+其增广拉格朗日函数为:
+$$
+\begin{aligned}
+L_t(z, u,v, \lambda, \omega)&=g(z)+\langle b,z \rangle - \langle \lambda, u+A^Tz \rangle - \sum \omega_i(1-\lVert u_i \rVert_2 - v_i) + \frac{t}{2}\lVert u+A^Tz\rVert_F^2 + \frac{t}{2}\sum(1-\lVert u_i \rVert_2 - v_i)^2\\
+\text{s.t.}\ v_i &\geq 0
+\end{aligned}
+$$
+
+
+根据一阶条件$\frac{\partial L_t(z, u,v, \lambda, \omega)}{\partial v}=0$可得到$v_i=\max(1-\lVert u_i \rVert_2-\frac{w_i}{t},0)$.  故可消去$v$.
+$$
+L_t(z,u,\lambda, \omega)=g(z)+\langle b,z \rangle - \langle \lambda, u+A^Tz \rangle + \frac{t}{2}\lVert u+A^Tz\rVert_F^2  + \sum \phi(1-\lVert u_i \rVert_2, w_i, t)
+$$
+其中$\phi(1-\lVert u_i \rVert_2, w_i, t)=\left \{ \begin{aligned} -\omega_i(1-\lVert u_i \rVert_2)+\frac{t}{2}(1-\lVert u_i \rVert_2)^2,&\ 1-\lVert u_i \rVert_2-\frac{w_i}{t} \leq 0	 \\ -\frac{w_i^2}{2t},&\ otherwise \end{aligned} \right.$
+
+更新方式为:
+$$
+\begin{aligned}
+z^{k+1}, u^{k+1} &= argmin_{z,u} L_t(z,u,\lambda^{k}, \lambda^{w}) \\
+\lambda^{k+1} &= \lambda^k - \frac{t}{2}(u^{k+1}+A^Tz^{k+1}) \\
+\omega^{k+1} &= \max(\omega^{k}-t(1-\lVert u^{k+1}_i \rVert_2), 0)
+\end{aligned}
+$$

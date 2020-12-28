@@ -451,7 +451,6 @@ def prox_th(x: np.ndarray, t):
 >
 > (g) Alternating direction method of multipliers for the dual problem.
 > 
-> (h) Alternating direction method of multipliers with linearization for the primal problem.
 
 首先引入约束, 构造对偶问题. 不妨设$y=Ax-b$, 原问题写成
 $$
@@ -488,24 +487,24 @@ L_t(z,u,\lambda)&=g(z)+\langle b,z \rangle - \langle \lambda, u+A^Tz \rangle + \
 $$
 迭代方式为:
 $$
-\begin{aligned}
+\begin{align}
 z^{k+1}, u^{k+1} &= arg\min_{z,u, \lVert u_i \rVert_2 \leq 1} L_t(z,u,\lambda^{k}) \\
 \lambda^{k+1} &= \lambda^k - \frac{t}{2}(u^{k+1}+A^Tz^{k+1}) \\
-\end{aligned}
+\end{align}
 $$
 
 其中还需要对下式求出显式解:
 $$
-\begin{aligned}
+\begin{align}
 z^{k+1}, u^{k+1} &= arg\min_{z,u, \lVert u_i \rVert_2 \leq 1} L_t(z,u,\lambda^{k}) \\
 &= arg\min_{z,u, \lVert u_i \rVert_2 \leq 1} \frac{1}{2}\lVert z \rVert_F^2+\langle b,z \rangle - \langle \lambda^k, u+A^Tz \rangle + \frac{t}{2}\lVert u+A^Tz\rVert_F^2 \\
 &= arg\min_{z,u, \lVert u_i \rVert_2 \leq 1} \frac{1}{2}\lVert z \rVert_F^2+\langle b,z \rangle + \frac{t}{2}\lVert u+A^Tz - \frac{1}{t}\lambda^k\rVert_F^2\\
-\end{aligned}
+\end{align}
 $$
 由KKT条件得到:
 $$
 \begin{aligned}
-u^{k+1} = \mathcal{P}_B(\frac{1}{t}\lambda^k-A^Tz) \\
+u^{k+1} = \mathcal{P}_B(\frac{1}{t}\lambda^k-A^Tz^{k+1}) \\
 z^{k+1} =  (1+tAA^T)^{-1}(A\lambda^k-tAu^{k+1}-b) \\
 \end{aligned}
 $$
@@ -513,5 +512,49 @@ $$
 $$
 \mathcal{P}_B^i(x) = \frac{x}{max(1, \lVert x\rVert_2)}
 $$
-为了加快速度, 不妨对$AA^T$进行特征值分解,  设$AA^T=Q\Lambda Q^T$,  则$(1+tAA^T)^{-1}=Q(I+t\Lambda)^{-1}Q^T$, 其中$(I+t\Lambda)^{-1}$易求.
+为了加快速度, 可以使用缓存分解技术, 对$1+tAA^T$进行Cholesky分解.
 
+交替方向乘子法与大体与增广拉格朗日函数法相似, 不同点在于把迭代过程中的联合求极小改成交替求极小.
+$$
+\begin{align}
+z^{k+1} &= (1+tAA^T)^{-1}(A\lambda^k-tAu^{k}-b) \\
+u^{k+1} &= \mathcal{P}_B(\frac{1}{t}\lambda^k-A^Tz^{k+1}) \\
+\lambda^{k+1} &= \lambda^k - \frac{t}{2}(u^{k+1}+A^Tz^{k+1}) \\
+\end{align}
+$$
+
+>  (h) Alternating direction method of multipliers with linearization for the primal problem. 
+
+首先引入约束, 原问题写成
+$$
+\begin{aligned}
+\min_{x,y} & f(x)+g(y) \\
+\text{s.t.} &\ x-y=0
+\end{aligned}
+$$
+其中$f(x)=\lVert x \rVert_{1,2}$, $g(y)=\frac{1}{2}\lVert Ay-b \rVert_F^2$.
+
+对于原问题的增广拉格朗日函数为:
+$$
+L_t(x,y,z) = f(x) + g(y) - \langle z, x-y \rangle + \frac{t}{2}\lVert x-y \rVert_F^2
+$$
+使用交替方向乘子法, 其迭代更新方式为:
+$$
+\begin{align}
+x^{k+1} &= arg\min_x L_t(x,y^k, z^k) \\ 
+ 	   &= arg \min_x \lVert x \rVert_{1,2} - \langle z^k, x \rangle + \frac{t}{2}\lVert x-y^k \rVert_F^2 \\
+		&= arg \min_x \lVert x \rVert_{1,2} + \frac{t}{2}\lVert x - y^k - \frac{1}{t}z^k\rVert_F^2 \\
+		&= prox_{\frac{1}{t}f}(y^k+\frac{1}{t}z^k)\\
+y^{k+1} &= arg\min_y L_t(x^{k+1},y, z^k) = (tI+A^TA)^{-1}(A^Tb-z^k+tx^{k+1}) \\
+z^{k+1} &= z^k - \frac{t}{2}(x^{k+1}-y^{k+1})
+\end{align}
+$$
+对$x^{k+1}$的更新使用<u>一次近似点梯度步</u>进行线性化:
+$$
+\begin{align}
+x^{k+1} &= arg \min_x \lVert x \rVert_{1,2} + t\langle y^k+\frac{1}{t}z^k, x\rangle + \frac{1}{2\eta}\lVert x - x^k \rVert_F^2 \\
+ 		&= arg \min_x \lVert x \rVert_{1,2} + t\langle y^k+\frac{1}{t}z^k, x\rangle + \frac{1}{2\eta}\lVert x - x^k \rVert_F^2 \\
+		&= arg \min_x \lVert x \rVert_{1,2} + \frac{1}{2\eta}\lVert x - x^k + \eta(ty^k+z^k)\rVert_F^2 \\
+		&= arg \min_x prox_{\eta f}(x^k - \eta(ty^k+z^k))
+\end{align}
+$$

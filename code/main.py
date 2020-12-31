@@ -17,6 +17,8 @@ from gl_ProxGD_primal import gl_ProxGD_primal
 from gl_FGD_primal import gl_FGD_primal
 from gl_FProxGD_primal import gl_FProxGD_primal
 from pytablewriter import MarkdownTableWriter
+from gl_ADMM_primal import gl_Admm_primal
+from gl_ADMM_dual import gl_Admm_dual
 from pytablewriter import typehint
 
 
@@ -138,7 +140,7 @@ if __name__ == '__main__':
     log_file_path = args.log
     destination_directory = args.dest_dir
 
-    setup_logger("opt", log_file_path, level=logging.INFO)
+    setup_logger("opt", log_file_path, level=logging.DEBUG)
     logger = logging.getLogger('opt')
     logger.info("========================== New Log ========================================")
 
@@ -168,23 +170,27 @@ if __name__ == '__main__':
         'CVX-Gurobi': gl_cvx_gurobi,
         # 'Mosek': gl_mosek,
         # 'Gurobi': gl_gurobi,
-        'SGD Primal': gl_SGD_primal,
-        "GD Primal": gl_GD_primal,
-        "FGD Primal": gl_FGD_primal,
-        "ProxGD Primal": gl_ProxGD_primal,
-        "FProxGD Primal": gl_FProxGD_primal,
+        # 'SGD Primal': gl_SGD_primal,
+        # "GD Primal": gl_GD_primal,
+        # "FGD Primal": gl_FGD_primal,
+        # "ProxGD Primal": gl_ProxGD_primal,
+        # "FProxGD Primal": gl_FProxGD_primal,
+        "ADMM Dual": gl_Admm_dual,
+        # "ADMM Primal": gl_Admm_primal,
     }
 
     solvers_opts = {
         'CVX-Mosek': {},
         'CVX-Gurobi': {},
-        'Mosek': {},
-        'Gurobi': {},
+        # 'Mosek': {},
+        # 'Gurobi': {},
         'SGD Primal': {},
         "GD Primal": {},
         "ProxGD Primal": {},
         "FGD Primal": {},
         "FProxGD Primal": {},
+        "ADMM Dual": {},
+        "ADMM Primal": {},
     }
 
     f_hists = {}
@@ -204,6 +210,8 @@ if __name__ == '__main__':
         "ProxGD Primal": 'r',
         "FGD Primal": 'y',
         "FProxGD Primal": 'k',
+        "ADMM Dual": 'm',
+        "ADMM Primal": 'c',
     }
 
     plt.clf()

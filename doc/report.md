@@ -229,6 +229,7 @@ $$
 SGD Primal和GD Primal的结果与ground truth $u$的比较如下. 我们可以看到, 基本上绝大部分的ground truth的分量都可以还原.
 
 ![SGD_Primal](report.assets/SGD_Primal.svg)
+
 ![GD_Primal](report.assets/GD_Primal.svg)
 
 下图是分别是SGD Primal和GD Primal的$(f(x^k)-f^*)/f^*$随iteration变化的曲线, 其中$f^*=f(u)$. 这里垂直的线出现的原因是由于目标函数中的正则项的存在, ground truth $u$不一定最小化目标函数, 因此$f(x^k)-f^*$可能为负数. 这也从侧面说明, 我们的实现如果仅关注此目标函数下, 可以得到比原问题得到的函数值更小的解.
@@ -490,19 +491,29 @@ $$
 \begin{align}
 z^{k+1}, u^{k+1} &= arg\min_{z,u, \lVert u_i \rVert_2 \leq \mu} L_\rho(z,u,x^{k}) \\
 				 &= arg\min_{z,u, \lVert u_i \rVert_2 \leq \mu} \frac{1}{2}\lVert z \rVert_F^2+\langle b,z \rangle - \langle x^k, u+A^Tz \rangle + \frac{\rho}{2}\lVert u+A^Tz\rVert_F^2 \\
-				 &= arg\min_{z,u, \lVert u_i \rVert_2 \leq \mu} \frac{1}{2}\lVert z \rVert_F^2+\langle b,z \rangle + \frac{\rho}{2}\lVert u+A^Tz - \frac{1}{\rho}x^k\rVert_F^2\\
+				 &= arg\min_{z,u, \lVert u_i \rVert_2 \leq \mu} \frac{1}{2}\lVert z \rVert_F^2+\langle b,z \rangle + \frac{\rho}{2}\lVert u+A^Tz - \frac{1}{\rho}x^k\rVert_F^2 \label{eq:min_z_u}\\
 x^{k+1} &= x^k -  \tau \rho(u^{k+1}+A^Tz^{k+1}) \\
 \end{align}
 $$
 
-交替方向乘子法与大体与增广拉格朗日函数法相似, 不同点在于把迭代过程中的联合求极小改成交替求极小.由KKT条件得到: 	
+其中式子($\ref{eq:min_z_u}$)可以通过梯度类算法进行求解. 由KKT条件可得 $z= (1+\rho AA^T)^{-1}(Ax^k-\rho Au-b)$. 消去$z$得到:
+$$
+\begin{align}
+\min_u & \frac{1}{2}\lVert (1+\rho AA^T)^{-1}(Ax^k-\rho Au-b) \rVert_F^2+\langle b,(1+\rho AA^T)^{-1}(Ax^k-\rho Au-b) \rangle + \frac{\rho}{2}\lVert u+A^T(1+\rho AA^T)^{-1}(Ax^k-\rho Au-b) - \frac{1}{\rho}x^k\rVert_F^2 \\
+s.t. &\lVert u_i \rVert_2 \leq \mu
+\end{align}
+$$
+在实现中我们使用了nestrov算法进行求解, 使用增广拉格朗日函数法求解对偶问题的完整代码见[gl_ALM_dual.py](https://github.com/magic3007/convex-optimization/blob/main/code/gl_ALM_dual.py).
+
+交替方向乘子法的代码见[gl_ADMM_dual.py](https://github.com/magic3007/convex-optimization/blob/main/code/gl_ADMM_dual.py), 其与大体与增广拉格朗日函数法相似, 不同点在于把迭代过程中的联合求极小改成交替求极小.由KKT条件得到: 
+
 $$
 \begin{align}
 z^{k+1} &= (1+\rho AA^T)^{-1}(Ax^k-\rho Au^{k}-b) \\
 u^{k+1} &= \mathcal{P}_B(\frac{1}{\rho}x^k-A^Tz^{k+1}) \\
 \end{align}
 $$
-其中$\mathcal{P}_B(x)$为投影算子, 其为:
+其中$\mathcal{P}_B(x)$为投影算子, 其为: 
 $$
 \mathcal{P}_B^i(x) = \frac{\mu x_i}{max(\mu, \lVert x_i\rVert_2)}
 $$
@@ -510,7 +521,7 @@ $$
 
 >  (h) Alternating direction method of multipliers with linearization for the primal problem. 
 
-首先引入约束, 原问题写成
+对原问题使用线性化的交替方向乘子法的代码见[gl_ADMM_primal.py](https://github.com/magic3007/convex-optimization/blob/main/code/gl_ADMM_primal.py).首先引入约束, 原问题写成
 $$
 \begin{aligned}
 \min_{x,y} & f(x)+g(y) \\
@@ -543,3 +554,21 @@ x^{k+1} &= arg \min_x \mu \lVert x \rVert_{1,2} + \rho \langle x^{k} -y^{k+1}-\f
 \end{align}
 $$
 
+以下列出了问题(a)-(h)得到的图表和统计数据. 在默认随机种子下, 相比于CVX mosek/gurobi, 其运行时间, 稀疏程度, 恢复效果, 迭代次数等如下. 我们可以看到, ALM和ADMM方法其迭代次数远小于之前的方法, 但是在由于ALM需要在内部使用梯度类算法求解子问题, ADMM内部求解子问题时需要进行的矩阵运算规模更大, 所以ALM和ADMM的单次迭代运行时间会更长, 总的求解时间会更长. 从编程复杂度和超参复杂程度上看, ADMM类算法无需使用连续化策略, 算法形式更加简洁. 从结构上看, ALM和ADMM的结果质量略逊于之前的算法,  因此实际应用的时候,可以将ADMM与其他高精度算法结合起来,这样从一个acceptable的结果变得在预期时间内可以达到较高收敛精度.
+
+
+
+| solver         | cpu   | iter | optval      | sparsity | err-to-exact | err-to-cvx-mosek | err-to-cvx-gurobi |
+| -------------- | ----- | ---- | ----------- | -------- | ------------ | ---------------- | ----------------- |
+| CVX-Mosek      | 0.32  | -1   | 6.10377E-01 | 0.1201   | 4.02E-05     | 0.00E+00         | 3.33E-07          |
+| CVX-Gurobi     | 0.69  | -1   | 6.10377E-01 | 0.1211   | 4.03E-05     | 3.33E-07         | 0.00E+00          |
+| SGD Primal     | 2.09  | 6300 | 6.10378E-01 | 0.0996   | 3.79E-05     | 4.30E-06         | 4.43E-06          |
+| GD Primal      | 2.48  | 7500 | 6.10378E-01 | 0.0996   | 3.79E-05     | 4.31E-06         | 4.44E-06          |
+| FGD Primal     | 1.24  | 2037 | 6.10378E-01 | 0.1221   | 4.21E-05     | 2.39E-06         | 2.27E-06          |
+| ProxGD Primal  | 1.55  | 1768 | 6.10377E-01 | 0.0996   | 3.79E-05     | 4.38E-06         | 4.52E-06          |
+| FProxGD Primal | 1.07  | 1721 | 6.10377E-01 | 0.0996   | 3.79E-05     | 4.38E-06         | 4.52E-06          |
+| ALM Dual       | 10.40 | 39   | 6.10389E-01 | 0.3467   | 4.39E-05     | 8.54E-06         | 8.50E-06          |
+| ADMM Dual      | 2.12  | 71   | 6.10786E-01 | 0.0996   | 1.98E-04     | 1.85E-04         | 1.85E-04          |
+| ADMM Primal    | 6.23  | 63   | 6.10421E-01 | 0.0996   | 9.01E-05     | 6.34E-05         | 6.34E-05          |
+
+![relative_objective_a_h](report.assets/relative_objective_a_h.svg)

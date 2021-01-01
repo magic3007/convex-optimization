@@ -19,6 +19,7 @@ from gl_FProxGD_primal import gl_FProxGD_primal
 from pytablewriter import MarkdownTableWriter
 from gl_ADMM_primal import gl_Admm_primal
 from gl_ADMM_dual import gl_Admm_dual
+from gl_ALM_dual import gl_Alm_dual
 from pytablewriter import typehint
 
 
@@ -140,7 +141,7 @@ if __name__ == '__main__':
     log_file_path = args.log
     destination_directory = args.dest_dir
 
-    setup_logger("opt", log_file_path, level=logging.DEBUG)
+    setup_logger("opt", log_file_path, level=logging.INFO)
     logger = logging.getLogger('opt')
     logger.info("========================== New Log ========================================")
 
@@ -170,20 +171,21 @@ if __name__ == '__main__':
         'CVX-Gurobi': gl_cvx_gurobi,
         # 'Mosek': gl_mosek,
         # 'Gurobi': gl_gurobi,
-        # 'SGD Primal': gl_SGD_primal,
-        # "GD Primal": gl_GD_primal,
-        # "FGD Primal": gl_FGD_primal,
-        # "ProxGD Primal": gl_ProxGD_primal,
-        # "FProxGD Primal": gl_FProxGD_primal,
+        'SGD Primal': gl_SGD_primal,
+        "GD Primal": gl_GD_primal,
+        "FGD Primal": gl_FGD_primal,
+        "ProxGD Primal": gl_ProxGD_primal,
+        "FProxGD Primal": gl_FProxGD_primal,
+        "ALM Dual": gl_Alm_dual,
         "ADMM Dual": gl_Admm_dual,
-        # "ADMM Primal": gl_Admm_primal,
+        "ADMM Primal": gl_Admm_primal,
     }
 
     solvers_opts = {
         'CVX-Mosek': {},
         'CVX-Gurobi': {},
-        # 'Mosek': {},
-        # 'Gurobi': {},
+        'Mosek': {},
+        'Gurobi': {},
         'SGD Primal': {},
         "GD Primal": {},
         "ProxGD Primal": {},
@@ -191,6 +193,7 @@ if __name__ == '__main__':
         "FProxGD Primal": {},
         "ADMM Dual": {},
         "ADMM Primal": {},
+        "ALM Dual": {},
     }
 
     f_hists = {}
@@ -212,6 +215,7 @@ if __name__ == '__main__':
         "FProxGD Primal": 'k',
         "ADMM Dual": 'm',
         "ADMM Primal": 'c',
+        "ALM Dual": 'peachpuff'
     }
 
     plt.clf()
@@ -220,7 +224,7 @@ if __name__ == '__main__':
     f_star = obj_func(u)
     for mode, f_hist in f_hists.items():
         f_hist = (f_hist - f_star) / f_star
-        plt.semilogy(np.arange(0, len(f_hist)), np.array(f_hist), plot_solver_color[mode], linewidth=2, label=mode)
+        plt.semilogy(np.arange(0, len(f_hist)), np.array(f_hist), color=plot_solver_color[mode], linewidth=2, label=mode)
     plt.legend(prop={'size': 12})
     plt.ylabel('$(f(x^k)-f^*)/f^*$')
     plt.xlabel('Iteration')

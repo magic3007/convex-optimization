@@ -13,7 +13,7 @@ def gl_Admm_dual(x0: np.ndarray, A: np.ndarray, b: np.ndarray, mu, opts: dict):
         "thres": 1e-3,  # 判断小量是否被认为 0 的阈值
         "tau": (1 + math.sqrt(5)) * 0.5,
         "rho": 1e2,
-        "converge_len": 10,
+        "converge_len": 20,
     }
 
     # The second dictionary's values overwrite those from the first.
